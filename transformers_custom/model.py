@@ -293,6 +293,16 @@ class Transformer(nn.Module):
                  src_pos: PositionalEncoding, 
                  tgt_pos: PositionalEncoding, 
                  projection_layer: ProjectionLayer) -> None:
+        """
+        Args:
+            encoder (Encoder): The encoder.
+            decoder (Decoder): The decoder.
+            src_embedding (InputEmbeddings): The source embedding.
+            tgt_embedding (InputEmbeddings): The target embedding.
+            src_pos (PositionalEncoding): The source positional encoding.
+            tgt_pos (PositionalEncoding): The target positional encoding.
+            projection_layer (ProjectionLayer): The projection layer.
+        """
                  
         super().__init__()
         self.encoder = encoder
@@ -327,6 +337,18 @@ def build_transfomer(src_vocab_size: int,
                      h: int = 8,
                      dropout: float = 0.1,
                      d_ff: int = 2048) -> None:
+    """
+    Args:
+        src_vocab_size (int): The size of the source vocabulary.
+        tgt_vocab_size (int): The size of the target vocabulary.
+        src_seq_length (int): The length of the source sequence.
+        tgt_seq_length (int): The length of the target sequence.
+        d_model (int, optional): The dimension of the model. Defaults to 512.
+        N (int, optional): The number of encoder and decoder blocks. Defaults to 6.
+        h (int, optional): The number of heads. Defaults to 8.
+        dropout (float, optional): The dropout rate. Defaults to 0.1.
+        d_ff (int, optional): The dimension of the feed forward network. Defaults to 2048.
+    """
     # embedding layers
     src_embedding = InputEmbeddings(src_vocab_size, d_model)
     tgt_embedding = InputEmbeddings(tgt_vocab_size, d_model)
@@ -369,29 +391,3 @@ def build_transfomer(src_vocab_size: int,
             nn.init.xavier_uniform_(p)
 
     return transformer
-
-
-
-
-    
-        
-
-
-    
-
-        
-    
-
-
-
-    
-    
-
-        
-
-
-
-
-
-    
-
