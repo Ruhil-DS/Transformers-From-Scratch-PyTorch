@@ -5,14 +5,14 @@ from torch.utils.data import Dataset
 class BilingualDataset(Dataset):
     def __init__(self,
                  ds,
-                 tokenizrer_src,
+                 tokenizer_src,
                  tokenizer_tgt,
                  src_lang,
                  tgt_lang,
                  seq_len) -> None:
         super().__init__()
         self.ds = ds
-        self.tokenizer_src = tokenizrer_src
+        self.tokenizer_src = tokenizer_src
         self.tokenizer_tgt = tokenizer_tgt
         self.src_lang = src_lang
         self.tgt_lang = tgt_lang
@@ -20,9 +20,9 @@ class BilingualDataset(Dataset):
 
         # converting the special tokens to tensors IDs
         # can use any tokenizer: src or tgt
-        self.sos_token = torch.Tensor(tokenizrer_src.token_to_id('[SOS]'), dtype=torch.int64)
-        self.eos_token = torch.Tensor(tokenizrer_src.token_to_id('[EOS]'), dtype=torch.int64)
-        self.pad_token = torch.Tensor(tokenizrer_src.token_to_id('[PAD]'), dtype=torch.int64)
+        self.sos_token = torch.tensor([tokenizer_tgt.token_to_id('[SOS]')], dtype=torch.int64)
+        self.eos_token = torch.tensor([tokenizer_tgt.token_to_id('[EOS]')], dtype=torch.int64)
+        self.pad_token = torch.tensor([tokenizer_tgt.token_to_id('[PAD]')], dtype=torch.int64)
 
     def __len__(self):
         return len(self.ds)
@@ -36,8 +36,8 @@ class BilingualDataset(Dataset):
         enc_input_tokens = self.tokenizer_src.encode(src_text).ids  # gives an array of token IDs
         dec_input_tokens = self.tokenizer_tgt.encode(tgt_text).ids
 
-        enc_num_padding_tokens = self.seq_len = len(enc_input_tokens) - 2  # subtracting 2 because of [SOS] and [EOS]
-        dec_num_padding_tokens = self.seq_len = len(dec_input_tokens) - 1  # subtracting 1 because of [SOS]; dec doesnt have [EOS]
+        enc_num_padding_tokens = self.seq_len - len(enc_input_tokens) - 2  # subtracting 2 because of [SOS] and [EOS]
+        dec_num_padding_tokens = self.seq_len - len(dec_input_tokens) - 1  # subtracting 1 because of [SOS]; dec doesnt have [EOS]
 
         if enc_num_padding_tokens < 0 or dec_num_padding_tokens < 0:
             raise ValueError('The sequence length is too short')
@@ -47,9 +47,9 @@ class BilingualDataset(Dataset):
         encoder_input = torch.cat(
             [
                 self.sos_token, 
-                torch.Tensor(enc_input_tokens, dtype=torch.int64), 
+                torch.tensor(enc_input_tokens, dtype=torch.int64), 
                 self.eos_token,
-                torch.Tensor([self.pad_token] * enc_num_padding_tokens, dtype=torch.int64)  # padding tokens added to have the same length sentences as input every time
+                torch.tensor([self.pad_token] * enc_num_padding_tokens, dtype=torch.int64)  # padding tokens added to have the same length sentences as input every time
 
             ])
         
@@ -57,18 +57,24 @@ class BilingualDataset(Dataset):
         decoder_input = torch.cat(
             [
                 self.sos_token,
-                torch.Tensor(dec_input_tokens, dtype=torch.int64),
-                torch.Tensor([self.pad_token] * dec_num_padding_tokens, dtype=torch.int64)
+                torch.tensor(dec_input_tokens, dtype=torch.int64),
+                torch.tensor([self.pad_token] * dec_num_padding_tokens, dtype=torch.int64)
             ])
         
         # add EOS to the lavbel/target
         label = torch.cat(
             [
-                torch.Tensor(dec_input_tokens, dtype=torch.int64),
+                torch.tensor(dec_input_tokens, dtype=torch.int64),
                 self.eos_token,
-                torch.Tensor([self.pad_token] * dec_num_padding_tokens, dtype=torch.int64)
+                torch.tensor([self.pad_token] * dec_num_padding_tokens, dtype=torch.int64)
             ])
         
+        print("------------------------------------")
+        print(f"Encoder input size: {encoder_input.size(0)}")
+        print(f"decoder input size: {decoder_input.size(0)}")
+        print(f"label size: {label.size(0)}")
+        print(f"seq len: {self.seq_len}")
+        print("------------------------------------")
         assert encoder_input.size(0) == self.seq_len
         assert decoder_input.size(0) == self.seq_len
         assert label.size(0) == self.seq_len

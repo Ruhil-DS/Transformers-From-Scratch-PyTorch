@@ -94,11 +94,12 @@ class FeedForwardBlock(nn.Module):
     
     def forward(self, x):
         # (batch_size, seq_length, d_model) --> (batch_size, seq_length, d_ff) --> (batch_size, seq_length, d_model)
-        x = self.linear_1(x)
-        x = torch.relu(x)
-        x = self.dropout(x)
-        x = self.linear_2(x)
-        return x
+        # x = self.linear_1(x)
+        # x = torch.relu(x)
+        # x = self.dropout(x)
+        # x = self.linear_2(x)
+        # return x
+        return self.linear_2(self.dropout(torch.relu(self.linear_1(x))))
     
 
 # Fifth component of the transformer model - Multi-Head Attention
@@ -193,25 +194,28 @@ class MultiHeadAttentionBlock(nn.Module):
 # Sixth component of the transformer model - residual connection
 # This is needed to ensure the skip connections are maintained
 class ResidualConnection(nn.Module):
-    def __init__(self, dropout: float) -> None:
+    def __init__(self, features: int, dropout: float) -> None:
         super().__init__()
         self.dropout = nn.Dropout(dropout)
-        self.norm = LayerNormalization()
+        self.norm = LayerNormalization(features)
 
     
     def forward(self, x, sublayer):
+        # normalized_x = self.norm(x)
+        # sublayer_output = sublayer(normalized_x)
+        # return self.dropout(sublayer_output) + x
         return x + self.dropout(sublayer(self.norm(x)))
         # return x + self.dropout(self.norm(sublayer(x))) # this is the original paper implementation
 
 
 # Seventh component of the transformer model - Atomic Encoder Block
 class EncoderBlock(nn.Module):
-    def __init__(self, self_attention_block: MultiHeadAttentionBlock, feed_forward_block: FeedForwardBlock, dropout: float) -> None:
+    def __init__(self, features: int, self_attention_block: MultiHeadAttentionBlock, feed_forward_block: FeedForwardBlock, dropout: float) -> None:
         super().__init__()
         self.self_attention_block = self_attention_block
         self.feed_forward_block = feed_forward_block
         # two residual connections are used in the encoder block as per the original paper
-        self.residual_connection = nn.ModuleList([ResidualConnection(dropout) for _ in range(2)])
+        self.residual_connection = nn.ModuleList([ResidualConnection(features, dropout) for _ in range(2)])
 
     def forward(self, x, src_mask=None):
         """
@@ -242,13 +246,13 @@ class Encoder(nn.Module):
 
 # Ninth component of the transformer model - Atomic Decoder block
 class DecoderBlock(nn.Module):
-    def __init__(self, self_attention_block: MultiHeadAttentionBlock, cross_attention_block: MultiHeadAttentionBlock, feed_forward_block: FeedForwardBlock, dropout: float) -> None:
+    def __init__(self, features:int, self_attention_block: MultiHeadAttentionBlock, cross_attention_block: MultiHeadAttentionBlock, feed_forward_block: FeedForwardBlock, dropout: float) -> None:
         super().__init__()
         self.self_attention_block = self_attention_block
         self.cross_attention_block = cross_attention_block
         self.feed_forward_block = feed_forward_block
         # because we have 3 residual connections in the decoder part according to the original paper
-        self.residual_connection = nn.ModuleList([ResidualConnection(dropout) for _ in range(3)])
+        self.residual_connection = nn.ModuleList([ResidualConnection(features, dropout) for _ in range(3)])
 
     def forward(self, x, encoder_output, src_mask, tgt_mask):
         x = self.residual_connection[0](x, lambda x: self.self_attention_block(x,x,x, tgt_mask))
@@ -261,7 +265,7 @@ class DecoderBlock(nn.Module):
 class Decoder(nn.Module):
     def __init__(self, layers: nn.ModuleList) -> None:
         super().__init__()
-        self.layers - layers
+        self.layers = layers
         self.norm = LayerNormalization()
     
     def forward(self, x, encoder_output, src_mask, tgt_mask):
@@ -364,14 +368,14 @@ def build_transfomer(src_vocab_size: int,
         # encoder
         encoder_self_attention_block = MultiHeadAttentionBlock(d_model, h, dropout)
         feed_forward_block = FeedForwardBlock(d_model, d_ff, dropout)
-        encoder_block = EncoderBlock(encoder_self_attention_block, feed_forward_block, dropout)
+        encoder_block = EncoderBlock(d_model, encoder_self_attention_block, feed_forward_block, dropout)
         encoder_blocks.append(encoder_block)
 
         # decoder
         decoder_self_attention_block = MultiHeadAttentionBlock(d_model, h, dropout)
         decoder_cross_attention_block = MultiHeadAttentionBlock(d_model, h, dropout)
         feed_forward_block = FeedForwardBlock(d_model, d_ff, dropout)
-        decoder_block = DecoderBlock(decoder_self_attention_block, decoder_cross_attention_block, feed_forward_block, dropout)
+        decoder_block = DecoderBlock(d_model, decoder_self_attention_block, decoder_cross_attention_block, feed_forward_block, dropout)
         decoder_blocks.append(decoder_block)
     
     # encoder/decoder
