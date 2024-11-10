@@ -57,7 +57,8 @@ def get_dataset(config):
     """
     Load the dataset from the Hugging Face datasets library.
     """
-    ds_raw = load_dataset("opus_books", f"{config['lang_src']}-{config['lang_tgt']}", split='train')
+    # ds_raw = load_dataset(f"opus_books", f"{config['lang_src']}-{config['lang_tgt']}", split='train')
+    ds_raw = load_dataset(f"{config['datasource']}", f"{config['lang_src']}-{config['lang_tgt']}", split='train')
 
     # build the tokenizer
     tokenizer_src = get_or_build_tokenizer(config, ds_raw, config['lang_src'])
@@ -99,6 +100,7 @@ def train_model(config):
     # define the device
     # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     device = "cuda" if torch.cuda.is_available() else "mps" if torch.has_mps or torch.backends.mps.is_available() else "cpu"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     print("Device used for training: ", device)
     Path(config['model_folder']).mkdir(parents=True, exist_ok=True)
     
@@ -137,7 +139,7 @@ def train_model(config):
             # run the tensors thorugh the transformer
             encoder_output = model.encode(encoder_input, encoder_mask) # (B, seq_len, d_model)
             decoder_output = model.decode(encoder_output, encoder_mask, decoder_input, decoder_mask) # (B, seq_len, d_model)
-            proj_output = model.project(decoder_output) # (B, seq_len, tgt_vocab_size)
+            proj_output = model.projection(decoder_output) # (B, seq_len, tgt_vocab_size)
 
             label = batch['label'].to(device) # (B, seq_len)
             # (B, seq_len, tgt_vocab_size) --> (B * seq_len, tgt_vocab_size)
@@ -168,6 +170,8 @@ def train_model(config):
         }, model_filename)
 
 if __name__ == "__main__":
+    import os
+    os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
     warnings.filterwarnings("ignore")
     config = get_config()
     train_model(config)

@@ -69,12 +69,12 @@ class BilingualDataset(Dataset):
                 torch.tensor([self.pad_token] * dec_num_padding_tokens, dtype=torch.int64)
             ])
         
-        print("------------------------------------")
-        print(f"Encoder input size: {encoder_input.size(0)}")
-        print(f"decoder input size: {decoder_input.size(0)}")
-        print(f"label size: {label.size(0)}")
-        print(f"seq len: {self.seq_len}")
-        print("------------------------------------")
+        # print("------------------------------------")
+        # print(f"Encoder input size: {encoder_input.size(0)}")
+        # print(f"decoder input size: {decoder_input.size(0)}")
+        # print(f"label size: {label.size(0)}")
+        # print(f"seq len: {self.seq_len}")
+        # print("------------------------------------")
         assert encoder_input.size(0) == self.seq_len
         assert decoder_input.size(0) == self.seq_len
         assert label.size(0) == self.seq_len
