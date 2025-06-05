@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 from dataset import BilingualDataset, causal_mask
 from model import build_transfomer
-from config import get_weights_file_path, get_config
+from config import get_weights_file_path, get_config, latest_weights_file_path
 
 def get_all_sentences(ds, lang):
     """
@@ -114,9 +114,11 @@ def train_model(config):
 
     inital_epoch = 0
     global_step = 0
-    if config['preload_model']:
-        model_filename = get_weights_path(config, config['preload_model'])
-        print(f"Preloading model {model_filenme}")
+    preload = config['preload']
+    model_filename = latest_weights_file_path(config) if preload == 'latest' else get_weights_file_path(config, preload) if preload else None
+    if model_filename:
+        model_filename = latest_weights_file_path(config)
+        print(f"Preloading model {model_filename}")
         state = torch.load(model_filename)
         inital_epoch = state["epoch"] + 1
         optimizer.load_state_dict(state['optimizer_state_dict'])
